@@ -1,0 +1,27 @@
+-----------------------------------
+ User-visible changes in guile-tap
+-----------------------------------
+
+* v0.2.0 → v0.3.0 (released 2021-05-23):
+
+** New Features
+
+- Experimental tap-harness program; not installed at present.
+- Replaced dependency upon Perl's prove by tap-harness.
+- Adjusted install target to work better with package systems such as guix.
+
+** Diffstat:
+
+    Makefile                    |  44 ++-
+    README                      |  28 +-
+    doc/test-tap.mdwn           |   8 +-
+    emacs-integration.el        |  15 -
+    examples/custom-macros.scm  |   2 +-
+    guile-load-path.scm         |  14 -
+    install                     | 168 +++++++---
+    scheme/test/tap-harness.scm | 631 ++++++++++++++++++++++++++++++++++++
+    tap-harness                 |  81 +++++
+    test/custom-macros.scm      |   6 +-
+    test/harness.scm            | 161 +++++++++
+    test/simple.scm             |   2 +-
+    12 files changed, 1067 insertions(+), 93 deletions(-)

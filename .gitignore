@@ -4,6 +4,7 @@
 *.orig
 *.go
 doc/*.3
+doc/*.7
 doc/*.html
 doc/*.texi
 doc/*.info

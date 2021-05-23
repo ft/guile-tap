@@ -1,32 +1,42 @@
-# NAME
+---
+title: Guile `(test tap)`
+subtitle: Reference Manual
+author: Frank Terbeck
+section: 7
+date: May, 2021
+...
+
+# Name
 
 (test tap) - TAP emitting test framework for GNU Guile Scheme
 
 
-# SYNOPSIS
+# Synopsis
 
+~~~~~~~{.scheme}
 (use-modules (test tap))
 
-(*with-test-bundle* "test bundle name" **...**)
+(with-test-bundle EXP ...)
 
-(*with-fs-test-bundle* **...**)
+(with-fs-test-bundle ...)
 
-(*define-test* "test name" **...**)
+(define-test "test name" ...)
 
-(*define-tap-test* (template ...) (expression ...))
+(define-tap-test (template ...) (expression ...))
 
-(*todo* **...**)
+(todo ...)
 
-(*require* **...**)
+(require ...)
 
-(*pass-if-true* **EXP**)
+(pass-if-true EXP)
 
-(*pass-if-false* **EXP**)
+(pass-if-false EXP)
 
-(*pass-if-=* **EXP-a** **EXP-b**) ;; See TEST CASE MACROS for more.
+(pass-if-= EXP-a EXP-b) ;; See TEST CASE MACROS for more.
+~~~~~~~
 
 
-# DESCRIPTION
+# Description
 
 *guile-tap* is a framework for writing test suites in Scheme, that emit output
 compliant with the TAP protocol. It features a fairly rich API for conveniently
@@ -40,7 +50,7 @@ to another Scheme implementation would be quite an undertaking. Nothing
 of the sort is planned.
 
 
-# TERMINOLOGY
+# Terminology
 
 *bundle*
 :    A bundle is a collection of test cases and a plan associated with a
@@ -71,7 +81,7 @@ of the sort is planned.
      term that refers to the entire set of test cases in a project.
 
 
-# ANATOMY OF A TEST SCRIPT
+# Anatomy of a Test Script
 
 Test scripts contain bundles of actual tests. Such bundles are defined by
 ‘*with-test-bundle*’:
@@ -114,7 +124,7 @@ the framework behaves as expected. Those scripts may be used for instructional
 purposes as well.
 
 
-# TEST DIRECTIVES
+# Test Directives
 
 Test directives add additional information to tests. Currently, they can be
 used to skip tests or mark them as `TODO`, which means that the test should be
@@ -190,7 +200,7 @@ instances in the `(todo ...)` form:
 ~~~~~~~
 
 
-# TEST CASE MACROS
+# Test Case Macros
 
 The macros discussed in this section need to be used to perform the actual
 testing with test-suites using this framework, since they take care of all the
@@ -364,7 +374,7 @@ TODO
 TODO
 
 
-# DEPRECATED FEATURES
+# Deprecated Features
 
 * `(force-import MODULE SYMBOL ...)`
 
@@ -375,7 +385,7 @@ Guile's new declarative module semantics. The use of this operator is therefore
 deprecated and may be removed in an upcoming major release of the module.
 
 
-# EXAMPLES
+# Examples
 
 ## Test complex properties with generic macros
 
@@ -418,14 +428,14 @@ Or to rehash the “complex” example from earlier:
 ~~~~~~~
 
 
-# SEE ALSO
+# See Also
 
 *TAP::Parser(3)*, *prove(1)*
 
 
-# COPYRIGHT
+# Copyright
 
-Copyright 2012-2020 Frank Terbeck <ft@bewatermyfriend.org>, All rights reserved.
+Copyright 2012-2021 Frank Terbeck ‹<ft@bewatermyfriend.org>›, All rights reserved.
 
 Redistribution  and   use  in  source   and  binary  forms,  with   or  without
 modification, are permitted provided that the following conditions are met:

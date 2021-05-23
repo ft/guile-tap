@@ -1,6 +1,6 @@
 # NAME
 
-(test tap) - TAP emitting test framework for Scheme
+(test tap) - TAP emitting test framework for GNU Guile Scheme
 
 
 # SYNOPSIS
@@ -28,9 +28,9 @@
 
 # DESCRIPTION
 
-*scm-test-tap* is a framework for writing test suites in Scheme, that emit
-output compliant with the TAP protocol. It features a fairly rich API for
-conveniently writing large, yet maintainable test suites.
+*guile-tap* is a framework for writing test suites in Scheme, that emit output
+compliant with the TAP protocol. It features a fairly rich API for conveniently
+writing large, yet maintainable test suites.
 
 The implementaton makes use of a number of non-standard features from
 GNU Guile, ranging from extensions (like purely functional record

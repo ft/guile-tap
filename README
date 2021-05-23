@@ -1,5 +1,25 @@
-This is a test-framework that emits TAP compliant output.
+----------------------------------------------------
+ Guile TAP — A Test Framework that emits TAP output
+----------------------------------------------------
 
-The code uses some extensions of the GNU Guile implementation of scheme and
-will therefore not work with other implementations, unless there is
-a compatibility layer in place.
+This is a library for GNU Guile that implements a framework for specifying test
+cases that emit output that adheres to the Test Anything Protocol (TAP)¹.
+
+It comes with an experimental harness (tap-harness).
+
+If you're using emacs, here are a number of adjustments to the default indenta-
+tion behaviour so it knows some of the macros the library uses:
+
+(mapc (lambda (thing)
+        (put (car thing)
+             'scheme-indent-function
+             (cdr thing)))
+      '((for-each-test . 1)
+        (with-test-bundle . 1)
+        (with-fs-test-bundle . 1)
+        (with-ellipsis . 1)
+        (set-record-type-printer! . 1)
+        (define-test . 1)))
+
+
+¹ http://testanything.org

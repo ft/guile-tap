@@ -28,4 +28,4 @@ guile-tap.info: guile-tap.texi
 clean:
 	rm -f $(HTML) $(PDF) $(MAN) $(INFO) *.texi *~
 
-.PHONY: all man html pdf clean
+.PHONY: all man html info pdf clean

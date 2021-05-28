@@ -1,4 +1,6 @@
-#!guile -s
+#!guile \
+--no-auto-compile
+-s
 -*- scheme -*-
 !#
 

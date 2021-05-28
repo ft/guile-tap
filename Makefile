@@ -14,7 +14,7 @@ CFLAGS += -Wbad-case-datum -Wformat -L$(LOAD_PATH)
 COMPILE = $(GUILD_BINARY) compile $(CFLAGS)
 
 TESTGUILE = ./run-single-test
-PROVE = '$(TESTGUILE)' ./tap-harness --verbose -e '$(TESTGUILE)'
+PROVE = '$(TESTGUILE)' ./tap-harness -e '$(TESTGUILE)'
 
 INSTALL = $(GUILE_BINARY) --no-auto-compile ./install
 DESTDIR =
@@ -24,6 +24,7 @@ MODULES_CORE =  $(TOPDIR)/scheme/test/tap.scm
 MODULES_CORE += $(TOPDIR)/scheme/test/tap-harness.scm
 MODULES = $(MODULES_CORE)
 OBJECTS = ${MODULES:.scm=.go}
+TESTS = test/*.scm
 
 .SUFFIXES: .scm .go
 
@@ -36,7 +37,10 @@ doc:
 	@(cd doc && $(MAKE) all;)
 
 test:
-	$(PROVE) test/*.scm
+	$(PROVE) $(TESTS)
+
+test-verbose:
+	$(PROVE) --verbose $(TESTS)
 
 failures:
 	$(PROVE) examples/*.scm || true

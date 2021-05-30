@@ -255,7 +255,9 @@
                ((bundle-number) (1- (bundle-number s)))
                ((bundle-log) (reverse (bundle-log s)))
                ((bundle-results) (finalise-results (bundle-results s))))))
-    (set-field next (bundle-outcome) (make-bundle-outcome next))))
+    (if (equal? '(fail) (bundle-outcome next))
+        next
+        (set-field next (bundle-outcome) (make-bundle-outcome next)))))
 
 (define (push-result state kind obj)
   (change-bundle-results
@@ -369,11 +371,28 @@
       (open-pipe* OPEN_READ r p)
       (open-pipe p OPEN_READ)))
 
+(define (process-return-code state rc)
+  (let ((exit-value (status:exit-val rc))
+        (stop-signal (status:stop-sig rc))
+        (term-signal (status:term-sig rc))
+        (push (lambda (obj)
+                (change-bundle-outcome (push-bundle-log* state obj)
+                                       '(fail)))))
+    (cond ((and (zero? exit-value)
+                (not stop-signal)
+                (not term-signal))
+           state)
+          (stop-signal (push `(stop-signal . ,stop-signal)))
+          (term-signal (push `(term-signal . ,term-signal)))
+          (else (push `(non-zero-return-code . ,exit-value))))))
+
 (define (program->state p r callback)
   (let ((port (run-test p r)))
     (let loop ((state (make-bundle-state #:name p)) (input (read-line port)))
       (if (eof-object? input)
-          ((cb:completion callback) (bundle-finalise state) input #f)
+          (let ((rc (close-pipe port)))
+            ((cb:completion callback) (bundle-finalise
+                                       (process-return-code state rc)) input #f))
           (loop (tap-process state input callback) (read-line port))))))
 
 (define* (harness-run #:key
@@ -606,7 +625,9 @@
 (define (harness-combined-result states)
   (define (get x) (lambda (b) (assq-ref (bundle-results b) x)))
   (define (count x) (fold + 0 (map (compose length (get x)) states)))
-  (let ((pass (count 'pass))
+  (let ((all-outcomes-pass? (every (lambda (x) (member x '(skip pass)))
+                                   (map (compose car bundle-outcome) states)))
+        (pass (count 'pass))
         (fail (count 'fail))
         (skip (count 'skip))
         (todo (count 'todo))
@@ -627,5 +648,6 @@
       (pnn todo          "were marked as TODO")
       (pnn todo-but-pass "are marked as TODO but signaled success")
       (newline)
-      (format #t "Test Result: ~a~%" (if (zero? fail) "PASS" "FAIL"))
-      (if (zero? fail) 0 1))))
+      (let ((pass? (and all-outcomes-pass? (zero? fail))))
+        (format #t "Test Result: ~a~%" (if pass? "PASS" "FAIL"))
+        (if pass? 0 1)))))

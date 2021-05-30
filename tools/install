@@ -101,8 +101,6 @@ Parameters:
             lst))
 
 (cmdline-process (cdr (command-line)))
-(*moduledir* *destdir* (*moduledir*))
-(*objectdir* *destdir* (*objectdir*))
 
 (format #t "bindir   : ~a~%" (*bindir*))
 (format #t "moduledir: ~a~%" (*moduledir*))
@@ -124,7 +122,7 @@ Parameters:
     (unless dryrun?
       (system! "mkdir" "-p" d)
       (system! "chmod" "0755" d)))
-  (let ((final (string-append d "/" (basename f))))
+  (let ((final (string-append (*destdir*) d "/" (basename f))))
     (format #t "Installing: ~a~%" final)
     (unless dryrun?
       (system! "cp" f final)

@@ -6,6 +6,9 @@
   `((program       "bin"    "tap-harness")
     (module        "scheme" "test/tap.scm")
     (module        "scheme" "test/tap-harness.scm")
+    (documentation "README")
+    (documentation "CHANGES")
+    (documentation "LICENCE")
     (documentation "doc"    ,(string-append *package* ".html"))
     (documentation "doc"    ,(string-append *package* ".pdf"))
     (infopage      "doc"    ,(string-append *package* ".info"))
@@ -154,6 +157,7 @@ Parameters:
 (define (install m)
   (match m
     (('program dir file)       (install-with-prefix dir file *bindir*))
+    (('documentation file)     (install-normal-file file (*docdir*)))
     (('documentation dir file) (install-with-prefix dir file *docdir*))
     (('infopage dir file)      (install-with-prefix dir file *infodir*))
     (('manpage section dir file)

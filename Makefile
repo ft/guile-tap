@@ -13,10 +13,10 @@ CFLAGS += -Wbad-case-datum -Wformat -L$(LOAD_PATH)
 
 COMPILE = $(GUILD_BINARY) compile $(CFLAGS)
 
-TESTGUILE = ./run-single-test
-PROVE = '$(TESTGUILE)' ./tap-harness -e '$(TESTGUILE)'
+TESTGUILE = ./tools/run-single-test
+PROVE = '$(TESTGUILE)' ./bin/tap-harness -e '$(TESTGUILE)'
 
-INSTALL = $(GUILE_BINARY) --no-auto-compile ./install
+INSTALL = $(GUILE_BINARY) --no-auto-compile ./tools/install
 DESTDIR =
 PREFIX = /usr/local
 

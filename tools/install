@@ -39,16 +39,6 @@
 (define *objectdir*     (make-default *libdir* "/guile/" *guile-version* "/site-ccache"))
 (define dryrun? #f)
 
-(define (strip-scm scm)
-  (let ((n (string-length scm))
-        (m (string-length ".scm")))
-    (if (< m n)
-        (substring scm 0 (- n m))
-        scm)))
-
-(define (add-go f)
-  (string-append f ".go"))
-
 (define (maybe-variable str modify!)
   (lambda (s)
     (let* ((pf (string-append str "="))

@@ -1,9 +1,15 @@
 ;; -*- scheme -*-
 
+(define *package* "guile-tap")
+
 (define *manifest*
-  '((program "bin"    "tap-harness")
-    (module  "scheme" "test/tap.scm")
-    (module  "scheme" "test/tap-harness.scm")))
+  `((program       "bin"    "tap-harness")
+    (module        "scheme" "test/tap.scm")
+    (module        "scheme" "test/tap-harness.scm")
+    (documentation "doc"    ,(string-append *package* ".html"))
+    (documentation "doc"    ,(string-append *package* ".pdf"))
+    (infopage      "doc"    ,(string-append *package* ".info"))
+    (manpage 7     "doc"    ,(string-append *package* ".7"))))
 
 (use-modules (ice-9 match)
              (ice-9 optargs))
@@ -17,11 +23,15 @@
       (l (set! value l)))))
 
 (define *destdir*       (make-default ""))
+(define *package-name*  (make-default *package*))
 (define *prefix*        (make-default "/usr/local"))
 (define *bindir*        (make-default *prefix* "/bin"))
 (define *libdir*        (make-default *prefix* "/lib"))
 (define *datarootdir*   (make-default *prefix* "/share"))
 (define *guile-version* (make-default (effective-version)))
+(define *infodir*       (make-default *datarootdir* "/info"))
+(define *mandir*        (make-default *datarootdir* "/man"))
+(define *docdir*        (make-default *datarootdir* "/doc/" *package-name*))
 (define *moduledir*     (make-default *datarootdir* "/guile/site/" *guile-version*))
 (define *objectdir*     (make-default *libdir* "/guile/" *guile-version* "/site-ccache"))
 (define dryrun? #f)
@@ -53,7 +63,7 @@
 usage: install [OPTION(s)...] [PARAMETER(s)...]
 
 Options:
-D
+
   --help, -h       Display this help text.
   --dry-run, -d    Run, but don't modify the file system.
 
@@ -61,8 +71,12 @@ Parameters:
 
   DESTDIR
   PREFIX
+  PACKAGE
   BINDIR
   LIBDIR
+  DOCDIR
+  MANDIR
+  INFODIR
   DATAROOTDIR
   GUILE_VERSION
   MODULEDIR
@@ -85,8 +99,12 @@ Parameters:
               #f))
         (cmdline-variable "DESTDIR"       *destdir*)
         (cmdline-variable "PREFIX"        *prefix*)
+        (cmdline-variable "PACKAGE"       *package-name*)
         (cmdline-variable "BINDIR"        *bindir*)
         (cmdline-variable "LIBDIR"        *libdir*)
+        (cmdline-variable "INFODIR"       *infodir*)
+        (cmdline-variable "MANDIR"        *mandir*)
+        (cmdline-variable "DOCDIR"        *docdir*)
         (cmdline-variable "DATAROOTDIR"   *datarootdir*)
         (cmdline-variable "GUILE_VERSION" *guile-version*)
         (cmdline-variable "MODULEDIR"     *moduledir*)
@@ -102,10 +120,6 @@ Parameters:
 
 (cmdline-process (cdr (command-line)))
 
-(format #t "bindir   : ~a~%" (*bindir*))
-(format #t "moduledir: ~a~%" (*moduledir*))
-(format #t "objectdir: ~a~%" (*objectdir*))
-
 (define (dir? d)
   (and (file-exists? d)
        (file-is-directory? d)))
@@ -118,15 +132,16 @@ Parameters:
       (quit 1))))
 
 (define (install-normal-file f d)
-  (unless (dir? d)
-    (unless dryrun?
-      (system! "mkdir" "-p" d)
-      (system! "chmod" "0755" d)))
-  (let ((final (string-append (*destdir*) d "/" (basename f))))
-    (format #t "Installing: ~a~%" final)
-    (unless dryrun?
-      (system! "cp" f final)
-      (system! "chmod" "0644" final))))
+  (when (file-exists? f)
+    (unless (dir? d)
+      (unless dryrun?
+        (system! "mkdir" "-p" d)
+        (system! "chmod" "0755" d)))
+    (let ((final (string-append (*destdir*) d "/" (basename f))))
+      (format #t "Installing: ~a~%" final)
+      (unless dryrun?
+        (system! "cp" f final)
+        (system! "chmod" "0644" final)))))
 
 (define* (install-with-prefix source-dir source-file destination-generate
                               #:optional prefix)
@@ -138,7 +153,13 @@ Parameters:
 
 (define (install m)
   (match m
-    (('program dir file) (install-with-prefix dir file *bindir*))
+    (('program dir file)       (install-with-prefix dir file *bindir*))
+    (('documentation dir file) (install-with-prefix dir file *docdir*))
+    (('infopage dir file)      (install-with-prefix dir file *infodir*))
+    (('manpage section dir file)
+     (let ((src (string-append dir "/" file))
+           (dest (string-append (*mandir*) "/man" (number->string section))))
+       (install-normal-file src dest)))
     (('module dir file)
      (let* ((module-prefix (dirname file))
             (module-name (basename file ".scm"))

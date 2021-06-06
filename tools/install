@@ -137,11 +137,12 @@ Parameters:
 
 (define (install-normal-file f d)
   (when (file-exists? f)
-    (unless (dir? d)
-      (unless dryrun?
-        (system! "mkdir" "-p" d)
-        (system! "chmod" "0755" d)))
-    (let ((final (string-append (*destdir*) d "/" (basename f))))
+    (let* ((dd (string-append (*destdir*) d))
+           (final (string-append dd "/" (basename f))))
+      (unless (dir? dd)
+        (unless dryrun?
+          (system! "mkdir" "-p" dd)
+          (system! "chmod" "0755" dd)))
       (format #t "Installing: ~a~%" final)
       (unless dryrun?
         (system! "cp" f final)

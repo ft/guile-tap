@@ -2,6 +2,30 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.3.0 → v0.4.0 (released 2021-06-06):
+
+** Miscellaneous
+
+- Improved installation routine
+- Experimental TAP harness is now installed
+- General build system clean up
+- Project repository clean up
+
+** Diffstat
+
+    .gitignore                               |   1 +
+    Makefile                                 |  12 +-
+    tap-harness => bin/tap-harness           |   4 +-
+    doc/Makefile                             |  41 +++---
+    doc/{test-tap.mdwn => guile-tap.mdwn}    |  52 ++++---
+    doc/template.latex                       |   9 +-
+    install                                  | 127 ----------------
+    scheme/test/tap-harness.scm              |  32 +++-
+    tools/install                            | 177 +++++++++++++++++++++++
+    run-single-test => tools/run-single-test |   0
+    10 files changed, 271 insertions(+), 184 deletions(-)
+
+
 * v0.2.0 → v0.3.0 (released 2021-05-23):
 
 ** New Features
@@ -10,7 +34,7 @@
 - Replaced dependency upon Perl's prove by tap-harness.
 - Adjusted install target to work better with package systems such as guix.
 
-** Diffstat:
+** Diffstat
 
     Makefile                    |  44 ++-
     README                      |  28 +-

@@ -124,6 +124,12 @@ Parameters:
       (format #t "Giving up!~%")
       (quit 1))))
 
+(define (file-is-executable? f)
+  (let* ((info (stat f))
+         (permissions (stat:perms info))
+         (exec-bits #o111))
+    (not (zero? (logand exec-bits permissions)))))
+
 (define (install-normal-file f d)
   (when (file-exists? f)
     (unless (dir? d)
@@ -134,7 +140,9 @@ Parameters:
       (format #t "Installing: ~a~%" final)
       (unless dryrun?
         (system! "cp" f final)
-        (system! "chmod" "0644" final)))))
+        (let ((mode (if (file-is-executable? f)
+                        "0755" "0644")))
+          (system! "chmod" mode final))))))
 
 (define* (install-with-prefix source-dir source-file destination-generate
                               #:optional prefix)

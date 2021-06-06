@@ -2,6 +2,18 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.4.0 → v0.4.1 (released 2021-06-06):
+
+** Bugfix
+
+- Fix DESTDIR handling in installation procedure. (a6f3bac)
+
+** Diffstat
+
+    tools/install | 11 ++++++-----
+    1 file changed, 6 insertions(+), 5 deletions(-)
+
+
 * v0.3.0 → v0.4.0 (released 2021-06-06):
 
 ** Miscellaneous

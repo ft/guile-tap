@@ -1,8 +1,8 @@
-#!guile \
+#!/usr/bin/guile \
 --no-auto-compile
 -s
--*- scheme -*-
 !#
+;; -*- scheme -*-
 
 (use-modules (ice-9 getopt-long)
              (test tap-harness))

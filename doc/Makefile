@@ -21,9 +21,9 @@ guile-tap.pdf: guile-tap.mdwn
 guile-tap.html: guile-tap.mdwn
 	pandoc -t html5 $(HTML_META) $(COMMONOPTIONS) -o $@ guile-tap.mdwn
 guile-tap.texi: guile-tap.mdwn
-	pandoc -t texinfo $(INFO_META) $(COMMONOPTIONS) -o $@ guile-tap.mdwn
+	pandoc --template template.texinfo -t texinfo $(INFO_META) $(COMMONOPTIONS) -o $@ guile-tap.mdwn
 guile-tap.info: guile-tap.texi
-	makeinfo --no-validate --force $< -o $@
+	makeinfo $< -o $@
 
 clean:
 	rm -f $(HTML) $(PDF) $(MAN) $(INFO) *.texi *~

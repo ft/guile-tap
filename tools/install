@@ -173,9 +173,10 @@ Parameters:
               source-file)))
 
 (define (install-info src dest)
-  (system! "install-info"
-           (format #f "--info-dir=~a" dest)
-           (string-append dest "/" src)))
+  (let ((dd (string-append (*destdir*) dest)))
+    (system! "install-info"
+             (format #f "--info-dir=~a" dd)
+             (string-append dd "/" src))))
 
 (define (install m)
   (match m

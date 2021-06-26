@@ -2,6 +2,25 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.4.1 → v0.4.2 (released 2021-06-27):
+
+** Bugfix
+
+- Fix TAP harness shebang line (5331e773)
+- Fix info page installation (9dc1904f..ab88a048)
+- Fix PDF manual generations with older LaTeX installations (bc6936db)
+
+** Diffstat
+
+    bin/tap-harness      |  4 ++--
+    doc/Makefile         |  4 ++--
+    doc/guile-tap.mdwn   |  2 ++
+    doc/template.latex   |  1 +
+    doc/template.texinfo | 50 ++++++++++++++++++++++++++++++++++++++++++++
+    tools/install        | 27 +++++++++++++++++++++---
+    6 files changed, 81 insertions(+), 7 deletions(-)
+
+
 * v0.4.0 → v0.4.1 (released 2021-06-06):
 
 ** Bugfix

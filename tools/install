@@ -1,4 +1,4 @@
-#!guile \
+#!/usr/bin/guile \
 --no-auto-compile
 -s
 !#
@@ -20,7 +20,8 @@
     (manpage 7     "doc"    ,(string-append *package* ".7"))))
 
 (use-modules (ice-9 match)
-             (ice-9 optargs))
+             (ice-9 optargs)
+             (srfi srfi-1))
 
 (define (make-default . lst)
   (let ((value lst))
@@ -158,12 +159,30 @@ Parameters:
     (install-normal-file (string-append source-dir "/" source-file)
                          destination)))
 
+(define (with-install-info?)
+  (any (lambda (d) (file-exists? (string-append d "/install-info")))
+       (string-split (getenv "PATH") #\:)))
+
+(define (install-info-file source-dir source-file destination-generate)
+  (if (with-install-info?)
+      (let ((src (string-append source-dir "/" source-file))
+            (dest (destination-generate)))
+        (install-normal-file src dest)
+        (install-info source-file dest))
+      (format #t "Warning: Cannot install ~a without install-info.~%"
+              source-file)))
+
+(define (install-info src dest)
+  (system! "install-info"
+           (format #f "--info-dir=~a" dest)
+           (string-append dest "/" src)))
+
 (define (install m)
   (match m
     (('program dir file)       (install-with-prefix dir file *bindir*))
     (('documentation file)     (install-normal-file file (*docdir*)))
     (('documentation dir file) (install-with-prefix dir file *docdir*))
-    (('infopage dir file)      (install-with-prefix dir file *infodir*))
+    (('infopage dir file)      (install-info-file dir file *infodir*))
     (('manpage section dir file)
      (let ((src (string-append dir "/" file))
            (dest (string-append (*mandir*) "/man" (number->string section))))

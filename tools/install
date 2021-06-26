@@ -167,8 +167,9 @@ Parameters:
   (if (with-install-info?)
       (let ((src (string-append source-dir "/" source-file))
             (dest (destination-generate)))
-        (install-normal-file src dest)
-        (install-info source-file dest))
+        (when (file-exists? src)
+          (install-normal-file src dest)
+          (install-info source-file dest)))
       (format #t "Warning: Cannot install ~a without install-info.~%"
               source-file)))
 

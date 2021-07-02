@@ -1,5 +1,5 @@
+PROJECT = guile-tap
 TOPDIR = .
-
 LOAD_PATH = $(TOPDIR)/scheme
 TEST_PATH = $(TOPDIR)/test
 
@@ -19,6 +19,7 @@ PROVE = '$(TESTGUILE)' ./bin/tap-harness -e '$(TESTGUILE)'
 INSTALL = $(GUILE_BINARY) --no-auto-compile ./tools/install
 DESTDIR =
 PREFIX = /usr/local
+DOCDIR = $(PREFIX)/share/doc/$(PROJECT)
 
 MODULES_CORE =  $(TOPDIR)/scheme/test/tap.scm
 MODULES_CORE += $(TOPDIR)/scheme/test/tap-harness.scm
@@ -46,7 +47,7 @@ failures:
 	$(PROVE) examples/*.scm || true
 
 install: all
-	$(INSTALL) DESTDIR="$(DESTDIR)" PREFIX="$(PREFIX)"
+	$(INSTALL) DESTDIR="$(DESTDIR)" DOCDIR="$(DOCDIR)" PREFIX="$(PREFIX)"
 
 clean:
 	find . -name "*.go" -exec rm -f '{}' +

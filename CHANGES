@@ -2,6 +2,18 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.4.2 → v0.4.3 (released 2021-07-03):
+
+** Miscellaneous
+
+- Allow specifying DOCDIR for install target (8d16999)
+
+** Diffstat
+
+    Makefile | 5 +++--
+    1 file changed, 3 insertions(+), 2 deletions(-)
+
+
 * v0.4.1 → v0.4.2 (released 2021-06-27):
 
 ** Bugfix

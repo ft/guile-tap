@@ -515,11 +515,11 @@
                  (format #t "  • ~a of ~a bundle~p ~a.~%" m n n text))))
     (format #t "Processed ~a test bundle~p:~%" n n)
     (tell n-pass 'passed)
-    (when (not (zero? n-fail))
+    (unless (zero? n-fail)
       (tell n-fail 'failed))
     (when (positive? n-skip)
       (tell n-skip "were skipped"))
-    (when (not (zero? n-oddity))
+    (unless (zero? n-oddity)
       (tell n-oddity "encountered an oddity")))
   states)
 

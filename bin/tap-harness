@@ -16,7 +16,8 @@
   (string-join (map (compose number->string cdr) v) "."))
 
 (define option-spec
-  '((debug   (single-char #\D))
+  '((colour  (single-char #\c))
+    (debug   (single-char #\D))
     (help    (single-char #\h))
     (verbose (single-char #\v))
     (version (single-char #\V))
@@ -42,6 +43,7 @@
   (format #t "  --version, -V          Print version information about the program.~%")
   (format #t "  --debug, -D            Enable debugging output in the program.~%")
   (format #t "  --verbose, -v          Enable verbose harness operation.~%")
+  (format #t "  --colour, -c           Enable terminal colours in harness output.~%")
   (newline)
   (format #t "  --exec EXEC, -e EXEC   Run PROGRAM(s) via EXEC.~%")
   (newline)
@@ -67,6 +69,9 @@
                              #:test progress-test
                              #:bailout render-parsed
                              #:completion progress-completion)))
+
+(when (opt 'colour)
+  (enable-harness-colours!))
 
 (quit
  (harness-combined-result

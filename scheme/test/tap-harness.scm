@@ -33,7 +33,8 @@
   #:use-module (ice-9 regex)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9 gnu)
-  #:export (make-harness-callback
+  #:export (enable-harness-colours!
+            make-harness-callback
             make-bundle-state
             input->record
             harness-run
@@ -274,6 +275,71 @@
 
 (define (push-bundle-log* s obj)
   (change-bundle-log s (push-bundle-log s obj)))
+
+(define colour-map '((black   . #\0)
+                     (red     . #\1)
+                     (green   . #\2)
+                     (yellow  . #\3)
+                     (blue    . #\4)
+                     (magenta . #\5)
+                     (cyan    . #\6)
+                     (white   . #\7)
+                     (default . #\9)))
+
+(define attribute-map '((reset      . #\0)
+                        (bold       . #\1)
+                        (dim        . #\2)
+                        (standout   . #\3)
+                        (underscore . #\4)
+                        (blink      . #\5)
+                        (reverse    . #\7)
+                        (invisible  . #\8)))
+
+(define (make-colour group c)
+  (string #\esc #\[ group (assq-ref colour-map c) #\m))
+
+(define (make-fg-colour c)
+  (make-colour #\3 c))
+
+(define (make-bg-colour c)
+  (make-colour #\4 c))
+
+(define (make-attribute c)
+  (string #\esc #\[ (assq-ref attribute-map c) #\m))
+
+(define with-colour? #f)
+
+(define (enable-harness-colours!)
+  (set! with-colour? #t))
+
+(define (cfmt:arg f a)
+  (define (disp obj)
+    (cond ((eq? f #t) (begin (display obj (current-output-port))
+                             #t))
+          ((not f) (if (symbol? obj)
+                       (symbol->string obj)
+                       obj))
+          (else (begin (display obj f)
+                       #t))))
+  (define (maybe-colour maker thing)
+    (if with-colour? (disp (maker thing)) ""))
+  (match a
+    (('fg c) (maybe-colour make-fg-colour c))
+    (('bg c) (maybe-colour make-bg-colour c))
+    (('at attr ...) (if with-colour?
+                        (disp (string-concatenate (map make-attribute attr)))
+                        ""))
+    ((? string? s) (disp s))
+    ((? symbol? s) (disp s))
+    ((? char? c)   (disp c))
+    ((args ...) (apply format (cons f args)))))
+
+(define (cfmt f . args)
+  (let ((worker (lambda (x) (cfmt:arg f x))))
+    (if f
+        (begin (for-each worker args)
+               #t)
+        (string-concatenate (map-in-order worker args)))))
 
 (define (handle-version s version)
   (unless (= version *tap-harness-version*)
@@ -532,7 +598,7 @@
 (define (render-directive d)
   (match d
     ((kind ('reason . r))
-     (format #t "# ~a~a~a"
+     (format #f "# ~a~a~a"
              (string-upcase (symbol->string kind))
              (if r " " "")
              (if r r "")))))
@@ -540,7 +606,8 @@
 (define (render-parsed s i p)
 
   (define (add-directive d)
-    (when d (display " ") (render-directive d)))
+    (when d
+      (cfmt #t " " '(fg yellow) (render-directive d) '(fg default))))
 
   (define* (maybe obj #:key (prefix " "))
     (when obj
@@ -552,7 +619,11 @@
             ('number . num)
             ('description . desc)
             ('directive . dir))
-     (display (if result "ok" "not ok"))
+     (cfmt #t `(fg ,(if dir
+                        'yellow
+                        (if result 'green 'red)))
+           (if result "ok" "not ok")
+           '(fg default))
      (maybe num)
      (maybe desc #:prefix " - ")
      (add-directive dir))
@@ -561,10 +632,13 @@
             ('start . start)
             ('end . end)
             ('directive . dir))
-     (format #t "~a..~a" start end)
+     (cfmt #t '(fg magenta) `("~a..~a" ,start ,end) '(fg default))
      (add-directive dir))
 
-    (('diagnostic . text) (display "# ") (display text))
+    (('diagnostic . text)
+     (match-string (text m)
+       ("^test bundle: " (cfmt #t '(fg magenta) "# " text '(fg default)))
+       ("" (cfmt #t '(at dim) "# " text '(at reset)))))
 
     (('bailout ('reason . reason))
      (display "Bail out!")
@@ -615,12 +689,18 @@
   (define (is-pass?) (bundle:pass? (bundle-outcome s)))
   (define (is-skip?) (skip? (bundle-plan s)))
   (clear-previous s)
-  (format #t "~a ~v,,'.t ~a~%"
-          (bundle-name s)
-          *progress-column*
-          (cond ((is-pass?) 'ok)
-                ((is-skip?) 'skip)
-                (else 'fail)))
+  (cfmt #t
+        `("~a ~v,,'.t "
+          ,(bundle-name s)
+          ,*progress-column*)
+        (cond ((is-pass?) '(fg green))
+              ((is-skip?) '(fg yellow))
+              (else '(fg red)))
+        (cond ((is-pass?) "ok")
+              ((is-skip?) "skip")
+              (else "fail"))
+        '(fg default)
+        #\newline)
   s)
 
 (define (harness-combined-result states)
@@ -636,20 +716,26 @@
         (todo-but-pass (count 'todo-but-pass)))
 
     (let* ((n (+ pass fail skip todo skip-but-fail todo-but-pass))
-           (tell (lambda (m text)
-                   (unless (zero? m)
-                     (format #t "  • ~a of ~a test~p ~a.~%" m n n text))))
-           (pnn (lambda (n text)
-                  (when (positive? n) (tell n text)))))
+           (always (lambda _ #t))
+           (tell (lambda* (m colour text #:optional (test positive?))
+                   (when (test m)
+                     (cfmt #t "  • "
+                           `(fg ,colour)
+                           `("~a of ~a test~p ~a." ,m ,n ,n ,text)
+                           '(fg default))
+                     (newline))))
+           (pass? (and all-outcomes-pass? (zero? fail))))
       (newline)
       (format #t "Processed ~a tests:~%" n)
-      (tell pass 'passed)
-      (tell fail 'failed)
-      (pnn skip          "were skipped")
-      (pnn skip-but-fail "are marked to SKIP but signaled failure")
-      (pnn todo          "were marked as TODO")
-      (pnn todo-but-pass "are marked as TODO but signaled success")
+      (tell pass (if pass? 'green 'red) "passed" always)
+      (tell fail (if pass? 'green 'red) "failed" always)
+      (tell skip          'default "were skipped")
+      (tell skip-but-fail 'red     "are marked to SKIP but signaled failure")
+      (tell todo          'default "were marked as TODO")
+      (tell todo-but-pass 'cyan    "are marked as TODO but signaled success")
       (newline)
-      (let ((pass? (and all-outcomes-pass? (zero? fail))))
-        (format #t "Test Result: ~a~%" (if pass? "PASS" "FAIL"))
-        (if pass? 0 1)))))
+      (cfmt #t "Test Result: "
+            `(fg ,(if pass? 'green 'red))
+            (if pass? "PASS" "FAIL")
+            '(at reset) #\newline)
+      (if pass? 0 1))))

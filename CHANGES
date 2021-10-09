@@ -2,6 +2,19 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.4.3 → v0.4.4 (released 2021-10-09):
+
+** Miscellaneous
+
+- Add optional output colourisation to harness implementation.
+
+** Diffstat
+
+    bin/tap-harness             |  25 ++++---
+    scheme/test/tap-harness.scm | 144 +++++++++++++++++++++++++++++-------
+    2 files changed, 130 insertions(+), 39 deletions(-)
+
+
 * v0.4.2 → v0.4.3 (released 2021-07-03):
 
 ** Miscellaneous

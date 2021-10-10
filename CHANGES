@@ -2,6 +2,19 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.4.4 → v0.4.5 (released 2021-10-10):
+
+** Bugfix
+
+- Fix backtrace output in exception handling.
+
+** Diffstat
+
+    Makefile            |  7 ++++--
+    scheme/test/tap.scm | 56 ++++++---------------------------------------
+    2 files changed, 12 insertions(+), 51 deletions(-)
+
+
 * v0.4.3 → v0.4.4 (released 2021-10-09):
 
 ** Miscellaneous

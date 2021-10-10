@@ -289,30 +289,6 @@
     (pp-expression (cons name* actual))
     (format #t "#~%")))
 
-(define (backtrace-frame->tap level frame)
-  (format #t "#   frame #~a: ~s~%"
-          level
-          (cons (frame-procedure-name frame)
-                (frame-arguments frame)))
-  (format #t "#     address: 0x~x" (frame-address frame))
-  (format #t "; stack-ptr: 0x~x" (frame-stack-pointer frame))
-  (format #t "; instr-ptr: 0x~x~%" (frame-instruction-pointer frame))
-  (format #t "#     previous: 0x~x" (frame-dynamic-link frame))
-  (format #t "; return: 0x~x~%" (frame-return-address frame))
-  (when (> (length (frame-bindings frame)) 0)
-    (format #t "#     bindings:~%"))
-  (let loop ((bs (frame-bindings frame)))
-    (if (null? bs)
-        #t
-        (let ((this (car bs)) (rest (cdr bs)))
-          (format #t "#       ~a (index/slot/repr: ~a/~a/~a)~%"
-                  (binding-name this)
-                  (binding-index this)
-                  (binding-slot this)
-                  (binding-representation this))
-          (format #t "#         ~s~%" (binding-ref this))
-          (loop rest)))))
-
 ;; `deal-with-exception' diagnoses caught exceptions.
 (define (deal-with-exception excp)
 
@@ -324,19 +300,6 @@
     (tap/comment "argument:")
     (tap/comment (format #f "    ~s" (exception-arguments excp)))
     (tap/comment ""))
-
-  ;; When printing backtraces, find the outer-most (catch #t ...), because
-  ;; that's the one this framework put into place. Anything beyond that is part
-  ;; of the stack the test-case caused.
-  (define (is-catch-t? frame)
-    (let ((name (frame-procedure-name frame))
-          (args (frame-arguments frame)))
-      (and (eq? 'catch name)
-           (> (length args) 0)
-           (boolean? (car args))
-           (car args))))
-
-  (define *frame-cut-off* 2)
 
   (tap/comment "exception:")
   (tap/comment (format #f "    ~s" (exception-name excp)))
@@ -359,18 +322,13 @@
          (tap/comment ""))
         (else (else-handler (exception-arguments excp))))
   (tap/comment "backtrace:")
-  (let loop ((state 'find-catch)
-             (stack (exception-stack excp))
-             (n (- (stack-length (exception-stack excp)) 1)))
-    (if (< n *frame-cut-off*)
-        (tap/comment "")
-        (let ((frame (stack-ref stack n)))
-          (case state
-            ((print-frame)
-             (backtrace-frame->tap (- n *frame-cut-off*) frame)
-             (loop state stack (- n 1)))
-            (else (loop (if (is-catch-t? frame) 'print-frame state)
-                        stack (- n 1))))))))
+  (format #t "#~%")
+  (for-each (lambda (s) (format #t "#   ~a~%" s))
+            (string-split (with-output-to-string
+                            (lambda ()
+                              (display-backtrace (exception-stack excp)
+                                                 (current-output-port))))
+                          #\newline)))
 
 ;; `require' is used to dynamically determine whether a dependency of a
 ;; test-case or even a test-bundle is satisfied and either skip the test or the

@@ -46,6 +46,9 @@ test-verbose:
 failures:
 	$(PROVE) examples/*.scm || true
 
+failures-verbose:
+	$(PROVE) --verbose examples/*.scm || true
+
 install: all
 	$(INSTALL) DESTDIR="$(DESTDIR)" DOCDIR="$(DOCDIR)" PREFIX="$(PREFIX)"
 
@@ -54,4 +57,4 @@ clean:
 	find . -name "*~" -exec rm -f '{}' +
 	(cd doc && $(MAKE) clean;)
 
-.PHONY: all clean doc failures install test
+.PHONY: all clean doc failures failures-verbose install test test-verbose

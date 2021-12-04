@@ -2,6 +2,27 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.4.5 → v0.4.6 (released 2021-12-04):
+
+** Bugfix
+
+- Properly extend ~GUILE_LOAD_PATH~ and ~GUILE_COMPILED_PATH~ in
+  ~tools/run-single-test~.
+
+** Miscellaneous
+
+- Restructure the use of internal variables.
+- Improve documentation with respect to force-import alternatives.
+
+** Diffstat
+
+    doc/guile-tap.mdwn    |   5 ++
+    scheme/test/tap.scm   | 201 ++++++++++++++++++++----------------------
+    test/helpers.scm      |  38 +++++---
+    tools/run-single-test |   4 +-
+    4 files changed, 129 insertions(+), 119 deletions(-)
+
+
 * v0.4.4 → v0.4.5 (released 2021-10-10):
 
 ** Bugfix

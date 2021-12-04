@@ -100,6 +100,7 @@
             make-labeled-values
             tap/bail-out
             tap/comment
+            tap/get-option
             tap/set-option))
 
 ;; Internal variables
@@ -123,48 +124,36 @@
 (define-syntax-rule (define! name expr ...)
   (define name (make-settable expr ...)))
 
+(define *test-description* #f)
+(define *test-hierarchy* '())
+(define *test-case-count* 0)
+(define *test-case-todo* #f)
+
+(define (set-hierarchy! h)
+  (set! *test-hierarchy* h))
+
 (define (valid-plan? plan)
   (or (not plan)
       (and (integer? plan)
            (positive? plan))))
 
-(define! plan #f valid-plan?)
-(define *todo-prints-diag* #f)
-(define *test-case-count* 0)
-(define *test-case-todo* #f)
-(define *test-description* #f)
-(define *test-hierarchy* '())
-(define *test-pp-width* 60)
-(define *test-force-tap-header* #f)
-(define *test-fs-suffix* ".t$")
-(define *test-fs-prefix* "^[0-9]+-")
-(define *test-fs-root* (getcwd))
-(define *test-fs-file* (car (command-line)))
+(define! plan                  #f                   valid-plan?)
+(define! todo-prints-diag      #f                   boolean?)
+(define! test-pp-width         60                   integer?)
+(define! test-force-tap-header #f                   boolean?)
+(define! test-fs-suffix        ".t$"                string?)
+(define! test-fs-prefix        "^[0-9]+-"           string?)
+(define! test-fs-root          (getcwd)             string?)
+(define! test-fs-file          (car (command-line)) string?)
 
-(define (set-hierarchy! h)
-  (set! *test-hierarchy* h))
-
-(define-syntax tap:option
-  (lambda (x)
-    (syntax-case x ()
-      ((_ name variable predicate)
-       #'(list (quote name)
-               (lambda () variable)
-               (lambda (xx)
-                 (set! variable xx))
-               predicate
-               (quote predicate))))))
-
-(define options (list (tap:option fs-root *test-fs-root* string?)
-                      (tap:option fs-suffix *test-fs-suffix* string?)
-                      (tap:option fs-prefix *test-fs-prefix* string?)
-                      (tap:option fs-file *test-fs-file* string?)
-                      (tap:option tap-todo-prints-diagnose
-                                  *todo-prints-diag* boolean?)
-                      (tap:option tap-force-header *test-force-tap-header*
-                                  boolean?)
-                      (tap:option tap-pretty-print-width *test-pp-width*
-                                  integer?)))
+(define options
+  `((fs-file                  . ,test-fs-file)
+    (fs-prefix                . ,test-fs-prefix)
+    (fs-root                  . ,test-fs-root)
+    (fs-suffix                . ,test-fs-suffix)
+    (tap-todo-prints-diagnose . ,todo-prints-diag)
+    (tap-force-header         . ,test-force-tap-header)
+    (tap-pretty-print-width   . ,test-pp-width)))
 
 (define (opt:get-entry key extr)
   (let ((result (filter-map (lambda (x)
@@ -175,43 +164,17 @@
         '()
         (extr (car result)))))
 
-(define (opt:get-value key)
-  (let ((f (opt:get-entry key cadr)))
-    (if (and (list? f)
-             (null? f))
-        f
-        (f))))
+(define (with-option key . rest)
+  (let ((parameter (assq-ref options key)))
+    (unless parameter
+      (throw 'invalid-tap-option key))
+    (apply parameter rest)))
 
-(define (opt:get-setter key)
-  (opt:get-entry key caddr))
-
-(define (opt:get-predicate key)
-  (opt:get-entry key cadddr))
-
-(define (opt:get-pred-name key)
-  (car (opt:get-entry key cddddr)))
+(define (tap/get-option key)
+  (with-option key))
 
 (define (tap/set-option key value)
-  (let ((s (opt:get-setter key))
-        (p (opt:get-predicate key)))
-    (cond ((not (null? s))
-           (if (p value)
-               (begin
-                 (s value)
-                 value)
-               (begin
-                 (format #t "Invalid value for `~a' (~s). " key value)
-                 (format #t "Needs to satisfy `~a'.~%" (opt:get-pred-name key))
-                 '())))
-          (else
-           (format #t "Invalid option: `~a'~%" key)
-           (format #t "  valid options:~%")
-           (let next ((o options))
-             (cond
-              ((null? o) '())
-              (else
-               (format #t "    ~a~%" (caar o))
-               (next (cdr o)))))))))
+  (with-option key value))
 
 ;; Plan handling
 
@@ -246,7 +209,7 @@
 
 (define (pp-expression expression)
   (pretty-print expression
-                #:width *test-pp-width*
+                #:width (test-pp-width)
                 #:display? #f
                 #:per-line-prefix "#     "))
 
@@ -446,9 +409,9 @@
 ;; *fine*.
 (define* (deduce-hierarchy filename
                            #:key
-                           (root *test-fs-root*)
-                           (suffix *test-fs-suffix*)
-                           (prefix *test-fs-prefix*))
+                           (root (test-fs-root))
+                           (suffix (test-fs-suffix))
+                           (prefix (test-fs-prefix)))
   (let* ((root-dir (if (string-match "/$" root)
                        root
                        (string-concatenate (list root "/"))))
@@ -481,7 +444,7 @@
     (with-syntax (((hierarchy ...)
                    (map (lambda (x)
                           (datum->syntax #'x x))
-                        (deduce-hierarchy *test-fs-file*))))
+                        (deduce-hierarchy (test-fs-file)))))
       (syntax-case x (skip)
         ((_ skip code ...)
          #'(with-test-bundle skip (hierarchy ...) code ...))
@@ -645,7 +608,7 @@
                                           *test-case-todo*
                                           success?)
                               ;; Output diagnostics if the result requires it.
-                              (when (and (or *todo-prints-diag*
+                              (when (and (or (todo-prints-diag)
                                              (not *test-case-todo*))
                                          failed?)
                                 (error-diag '(name-a input-a ...)
@@ -803,7 +766,7 @@
 ;; Every test bundle with TAP version >= 13, prints a header announcing the
 ;; version of the implemented TAP protocol.
 (define (tap/header)
-  (if (or *test-force-tap-header*
+  (if (or (test-force-tap-header)
           (>= *sts/tap/version* 13))
       (format #t "TAP version ~d~%" *sts/tap/version*)))
 

@@ -12,7 +12,7 @@
     (pass-if-true (or (boolean? (plan))
                       (integer? (plan)))))
   (define-test "Default pp-width okay?"
-    (pass-if-= *test-pp-width* 60))
+    (pass-if-= (test-pp-width) 60))
   (let ((thing (make-settable 23)))
     (define-test "settable thing initialised to 23"
       (pass-if-= 23 (thing)))

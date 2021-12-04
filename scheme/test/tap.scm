@@ -104,7 +104,31 @@
 
 ;; Internal variables
 
-(define *plan* #f)
+(define* (make-settable init #:optional (valid? (const #t)))
+  (unless (valid? init)
+    (throw 'invalid-settable-value init))
+  (let ((state init))
+    (lambda args
+      (match args
+        (() state)
+        ((update)
+         (unless (valid? update)
+           (throw 'invalid-settable-value update))
+         (let ((old-state state))
+           (set! state update)
+           old-state))
+        (_ (error (format #f "settable: Invalid call structure: ~a~%"
+                          (cons '_ args))))))))
+
+(define-syntax-rule (define! name expr ...)
+  (define name (make-settable expr ...)))
+
+(define (valid-plan? plan)
+  (or (not plan)
+      (and (integer? plan)
+           (positive? plan))))
+
+(define! plan #f valid-plan?)
 (define *todo-prints-diag* #f)
 (define *test-case-count* 0)
 (define *test-case-todo* #f)
@@ -191,11 +215,14 @@
 
 ;; Plan handling
 
-(define (plan value)
-  (set! *plan* value))
-
 (define (no-plan)
-  (set! *plan* 'no-plan))
+  (plan #f))
+
+(define (deterministic-plan?)
+  (integer? (plan)))
+
+(define (non-deterministic-plan?)
+  (not (plan)))
 
 ;; Test suite core
 
@@ -207,8 +234,8 @@
       (begin
         (tap/header)
         (tap/comment (format #f "test bundle: ~a" *test-hierarchy*))
-        (if (number? *plan*)
-            (tap/plan *plan*))))
+        (if (number? (plan))
+            (tap/plan (plan)))))
   (set! *test-case-count* (+ *test-case-count* 1))
   (set! *test-description* name))
 
@@ -387,13 +414,13 @@
        #'(let ()
            (set! *test-case-count* 0)
            (set-hierarchy! (quote hierarchy))
-           (set! *plan* #f)
+           (no-plan)
            (catch 'sts/tap/bail-out
              (lambda ()
                (catch 'sts/test-requirement-failed
                  (lambda ()
                    code ...
-                   (if (eq? *plan* 'no-plan)
+                   (if (non-deterministic-plan?)
                        (tap/plan *test-case-count*)))
                  (lambda (k . a)
                    (tap/bundle-skip (format #f "~a" (quote hierarchy))))))

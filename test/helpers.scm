@@ -4,18 +4,34 @@
 
 (use-modules (test tap))
 
-(force-import (test tap) *plan* *test-pp-width*)
-(define labels (make-labeled-values *plan* *test-pp-width*))
+(set-current-module (resolve-module '(test tap)))
 
 (with-test-bundle (test tap helpers)
-  (plan (+ 2 (length labels)))
+  (plan 11)
   (define-test "Is *plan* okay?"
-    (pass-if-true (or (boolean? *plan*)
-                      (symbol? *plan*))))
+    (pass-if-true (or (boolean? (plan))
+                      (integer? (plan)))))
   (define-test "Default pp-width okay?"
     (pass-if-= *test-pp-width* 60))
-  (tap/comment "This is a comment...")
-  (map (lambda (x)
-         (define-test (format #f "label: ~a, value: ~a" (car x) (cdr x))
-           (pass-if-true #t)))
-       labels))
+  (let ((thing (make-settable 23)))
+    (define-test "settable thing initialised to 23"
+      (pass-if-= 23 (thing)))
+    (define-test "settable thing return old state when modified"
+      (pass-if-= 23 (thing 'foobar)))
+    (define-test "settable thing set to symbol foobar"
+      (pass-if-eq? 'foobar (thing))))
+  (define-test "settable thing's initial state needs to adhere to its predicate"
+    (pass-if-exception 'invalid-settable-value
+                       (make-settable 42 symbol?)))
+  (define-test "settable thing's initial state needs to adhere to its predicate"
+    (pass-if-no-exception (make-settable 23 number?)))
+  (let ((thing (make-settable 'foobar symbol?)))
+    (define-test "settable thing initialised to 23"
+      (pass-if-eq? 'foobar (thing)))
+    (define-test "settable thing return old state when modified"
+      (pass-if-eq? 'foobar (thing 'quux)))
+    (define-test "settable thing set to symbol foobar"
+      (pass-if-eq? 'quux (thing)))
+    (define-test "settable thing requires predicate on update"
+      (pass-if-exception 'invalid-settable-value
+                         (thing 23)))))

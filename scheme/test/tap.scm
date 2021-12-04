@@ -124,13 +124,12 @@
 (define-syntax-rule (define! name expr ...)
   (define name (make-settable expr ...)))
 
-(define *test-description* #f)
-(define *test-hierarchy* '())
-(define *test-case-count* 0)
-(define *test-case-todo* #f)
+(define! test-description #f)
+(define! test-hierarchy   '())
+(define! test-case-count  0  integer?)
+(define! test-case-todo   #f boolean?)
 
-(define (set-hierarchy! h)
-  (set! *test-hierarchy* h))
+;; TAP module options
 
 (define (valid-plan? plan)
   (or (not plan)
@@ -193,14 +192,14 @@
 ;; also handles some output which is applicable only for the first test within
 ;; a bundle.
 (define (update-test name)
-  (if (= *test-case-count* 0)
+  (if (= (test-case-count) 0)
       (begin
         (tap/header)
-        (tap/comment (format #f "test bundle: ~a" *test-hierarchy*))
+        (tap/comment (format #f "test bundle: ~a" (test-hierarchy)))
         (if (number? (plan))
             (tap/plan (plan)))))
-  (set! *test-case-count* (+ *test-case-count* 1))
-  (set! *test-description* name))
+  (test-case-count (+ (test-case-count) 1))
+  (test-description name))
 
 (define (print-location loc)
   (tap/comment (format #f "    file: ~s" (assq-ref loc 'filename)))
@@ -241,7 +240,7 @@
 
 ;; `error-diag' provides detailed diagnostic output for failed tests.
 (define (error-diag test full loc expression evaled data)
-  (format #t "#~%# failed test: ~s~%" *test-description*)
+  (format #t "#~%# failed test: ~s~%" (test-description))
   (format #t "#~%# location:~%")
   (print-location loc)
   (format #t "#~%# full test-expression:~%")
@@ -269,7 +268,7 @@
   (let ((name* (syntax->datum name))
         (expected (syntax->datum input-a))
         (actual (syntax->datum input)))
-    (format #t "#~%# failed test: ~s~%" *test-description*)
+    (format #t "#~%# failed test: ~s~%" (test-description))
     (format #t "#~%# Wrong number of arguments with: ~a~%" name*)
     (format #t "#~%# location:~%")
     (print-location loc)
@@ -336,11 +335,11 @@
     (syntax-case x ()
       ((_ exp0 exp1 ...)
        #'(let ()
-           (set! *test-case-todo* #t)
+           (test-case-todo #t)
            exp0
            exp1
            ...
-           (set! *test-case-todo* #f))))))
+           (test-case-todo #f))))))
 
 ;; The `define-test' is used to introduce each and every test case together
 ;; with a name for human beings to recognise it by. Test code (as in
@@ -351,7 +350,7 @@
       ((_ skip name code ...)
        #'(let ()
            (update-test name)
-           (tap/skip *test-case-count* *test-description*)))
+           (tap/skip (test-case-count) (test-description))))
       ((_ name code ...)
        #'(let ()
            (update-test name)
@@ -359,7 +358,7 @@
              (lambda ()
                code ...)
              (lambda (k . a)
-               (tap/skip *test-case-count* *test-description*))))))))
+               (tap/skip (test-case-count) (test-description)))))))))
 
 ;; `with-test-bundle' initialises all the accounting data for a test bundle and
 ;; provides an environment to run tests in. In particular, it handles plan
@@ -375,8 +374,8 @@
        #'(tap/bundle-skip (format #f "~a" (quote hierarchy))))
       ((_ hierarchy code ...)
        #'(let ()
-           (set! *test-case-count* 0)
-           (set-hierarchy! (quote hierarchy))
+           (test-case-count 0)
+           (test-hierarchy (quote hierarchy))
            (no-plan)
            (catch 'sts/tap/bail-out
              (lambda ()
@@ -384,7 +383,7 @@
                  (lambda ()
                    code ...
                    (if (non-deterministic-plan?)
-                       (tap/plan *test-case-count*)))
+                       (tap/plan (test-case-count))))
                  (lambda (k . a)
                    (tap/bundle-skip (format #f "~a" (quote hierarchy))))))
              (lambda (k . a)
@@ -603,13 +602,13 @@
                                       (if (exception? x)
                                           (deal-with-exception x)))))
                               ;; Report the TAP result of the test.
-                              (tap/result *test-case-count*
-                                          *test-description*
-                                          *test-case-todo*
+                              (tap/result (test-case-count)
+                                          (test-description)
+                                          (test-case-todo)
                                           success?)
                               ;; Output diagnostics if the result requires it.
                               (when (and (or (todo-prints-diag)
-                                             (not *test-case-todo*))
+                                             (not (test-case-todo)))
                                          failed?)
                                 (error-diag '(name-a input-a ...)
                                             '(name-a input :::)
@@ -634,9 +633,9 @@
                    ;; tify the user via TAP output.
                    ((name e :::)
                     #'(begin
-                        (tap/result *test-case-count*
-                                    *test-description*
-                                    *test-case-todo*
+                        (tap/result (test-case-count)
+                                    (test-description)
+                                    (test-case-todo)
                                     #f)
                         (handle-wrong-number-of-arguments
                          'name

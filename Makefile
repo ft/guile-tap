@@ -52,9 +52,16 @@ failures-verbose:
 install: all
 	$(INSTALL) DESTDIR="$(DESTDIR)" DOCDIR="$(DOCDIR)" PREFIX="$(PREFIX)"
 
+tools/tap-harness: tools/tap-harness.in
+	sed -e 's,@@PREFIX@@,'"$$PWD"',' < $< > $@
+	chmod 0755 $@
+
+tool: tools/tap-harness
+
 clean:
 	find . -name "*.go" -exec rm -f '{}' +
 	find . -name "*~" -exec rm -f '{}' +
+	rm -f tools/tap-harness
 	(cd doc && $(MAKE) clean;)
 
-.PHONY: all clean doc failures failures-verbose install test test-verbose
+.PHONY: all clean doc failures failures-verbose install test test-verbose tool

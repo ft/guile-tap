@@ -9,5 +9,6 @@ doc/*.html
 doc/*.texi
 doc/*.info
 doc/*.pdf
+tools/tap-harness
 tags
 TAGS

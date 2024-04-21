@@ -25,6 +25,7 @@
 (define-module (test tap-harness)
   #:use-module (ice-9 control)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 getopt-long)
   #:use-module (ice-9 match)
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 popen)
@@ -55,7 +56,8 @@
             render-parsed
             progress-completion
             progress-plan
-            progress-test))
+            progress-test
+            tap-harness:main))
 
 (define *tap-harness-version* 12)
 (define *progress-column* 50)
@@ -753,3 +755,93 @@
             (if pass? "PASS" "FAIL")
             '(at reset) #\newline)
       (if pass? 0 1))))
+
+;; Main application implementation
+
+(define *name*    'tap-harness)
+(define *version* '((major . 0)
+                    (minor . 1)
+                    (patch . 0)))
+
+(define (pp-version v)
+  (string-join (map (compose number->string cdr) v) "."))
+
+(define (usage)
+  (newline)
+  (format #t " Usage:   tap-harness [OPTION(s)...] [PROGRAM(s)...]~%")
+  (newline)
+  (format #t "  --help, -h             Print this help text.~%")
+  (format #t "  --version, -V          Print version information about the program.~%")
+  (format #t "  --debug, -D            Enable debugging output in the program.~%")
+  (format #t "  --verbose, -v          Enable verbose harness operation.~%")
+  (format #t "  --colour, -c           Enable terminal colours in harness output.~%")
+  (newline)
+  (format #t "  --exec EXEC, -e EXEC   Run PROGRAM(s) via EXEC.~%")
+  (newline))
+
+
+(define (tap-harness:main)
+  (define parameters (let loop ((rest (command-line)))
+                       (cond ((null? rest) (command-line))
+                             ((string= (car rest) "--") (cons "tap-harness"
+                                                              (cdr rest)))
+                             (else (loop (cdr rest))))))
+  (define option-spec
+    '((colour  (single-char #\c))
+      (debug   (single-char #\D))
+      (help    (single-char #\h))
+      (verbose (single-char #\v))
+      (version (single-char #\V))
+      (exec    (single-char #\e) (value #t))))
+
+  (define opts (getopt-long parameters option-spec
+                            #:stop-at-first-non-option #t))
+
+  (define (opt o)
+    (option-ref opts o #f))
+
+  (define (arguments)
+    (opt '()))
+
+  (define (with-arguments?)
+    ((compose not zero? length) (arguments)))
+
+  (define harness-callback
+    (if (opt 'verbose)
+        (make-harness-callback #:test render-parsed
+                               #:plan render-parsed
+                               #:diagnostic render-parsed
+                               #:version render-parsed
+                               #:bailout render-parsed)
+        (make-harness-callback #:plan progress-plan
+                               #:test progress-test
+                               #:bailout render-parsed
+                               #:completion progress-completion)))
+
+  (when (opt 'help)
+    (usage)
+    (quit 0))
+
+  (when (opt 'version)
+    (format #t "~a version ~a~%" *name* (pp-version *version*))
+    (quit 0))
+
+  (when (and (opt 'exec) (not (with-arguments?)))
+    (format #t "~a: Option --exec (-e) requires non-option arguments to run.~%"
+            *name*)
+    (quit 1))
+
+  (when (opt 'colour)
+    (enable-harness-colours!))
+
+  (quit
+   (harness-combined-result
+    (if (with-arguments?)
+        (harness-analyse ((if (opt 'debug) pp-harness-state identity)
+                          (harness-run #:run-programs (arguments)
+                                       #:runner (opt 'exec)
+                                       #:callback harness-callback))
+                         #:pre-summary (lambda (_) (newline)))
+        (harness-analyse ((if (opt 'debug) pp-harness-state identity)
+                          (harness-stdin harness-callback))
+                         #:pre-summary (lambda (_) (newline)))))))

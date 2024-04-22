@@ -1,4 +1,4 @@
-;; Copyright 2021 Frank Terbeck <ft@bewatermyfriend.org>
+;; Copyright 2021-2024 Frank Terbeck <ft@bewatermyfriend.org>
 ;; All rights reserved.
 ;;
 ;; Redistribution  and  use  in  source  and  binary  forms,  with  or  without
@@ -779,20 +779,68 @@
   (format #t "  --exec EXEC, -e EXEC   Run PROGRAM(s) via EXEC.~%")
   (newline))
 
-
-(define (tap-harness:main)
-  (define parameters (let loop ((rest (command-line)))
-                       (cond ((null? rest) (command-line))
+(define (tap-harness:main params)
+  (define parameters (let loop ((rest params))
+                       (cond ((null? rest) params)
                              ((string= (car rest) "--") (cons "tap-harness"
                                                               (cdr rest)))
                              (else (loop (cdr rest))))))
   (define option-spec
-    '((colour  (single-char #\c))
-      (debug   (single-char #\D))
-      (help    (single-char #\h))
-      (verbose (single-char #\v))
-      (version (single-char #\V))
-      (exec    (single-char #\e) (value #t))))
+    '((blib              (single-char #\b))
+      (colour            (single-char #\c))
+      (color)
+      (comments          (single-char #\o))
+      (count)
+      (debug             (single-char #\D))
+      (directives)
+      (dry               (single-char #\d))
+      (failures          (single-char #\f))
+      (help              (single-char #\h))
+      (ignore-exit)
+      (man               (single-char #\H))
+      (merge             (single-char #\m))
+      (nocolor)
+      (nocount)
+      (norc)
+      (normalize)
+      (parse             (single-char #\p))
+      (quiet             (single-char #\q))
+      (QUIET             (single-char #\Q))
+      (recurse           (single-char #\r))
+      (reverse)
+      (shuffle           (single-char #\s))
+      (tainting-checks   (single-char #\T))
+      (tainting-warnings (single-char #\t))
+      (timer)
+      (trap)
+      (verbose           (single-char #\v))
+      (version           (single-char #\V))
+      (fatal-warnings    (single-char #\W))
+      (enable-warnings   (single-char #\w))
+      (include-path      (single-char #\I) (value #t))
+      (load-plugin       (single-char #\P) (value #t))
+      (load-module       (single-char #\M) (value #t))
+      (archive           (single-char #\a) (value #t))
+      (exec              (single-char #\e) (value #t))
+      (ext                                 (value #t))
+      (formatter                           (value #t))
+      (harness                             (value #t))
+      (jobs              (single-char #\j) (value #t))
+      (rc                                  (value #t))
+      (rules                               (value #t))
+      (source                              (value #t))
+      (state                               (value #t))
+      (statefile                           (value #t))))
+
+  ;; These are options that prove supports, that we just eat and ignore. Some
+  ;; of them might be nice to have, though. We'll make a note of their use in
+  ;; --debug mode in the future.
+  (define prove-compat
+    '(norc
+      man
+      lib blib shuffle nocolor count nocount dry failures comments ignore-exit
+      merge recurse reverse quiet QUIET parse directives timer trap normalize
+      ext harness formatter source archive jobs state statefile rc rules))
 
   (define opts (getopt-long parameters option-spec
                             #:stop-at-first-non-option #t))
@@ -800,11 +848,11 @@
   (define (opt o)
     (option-ref opts o #f))
 
-  (define (arguments)
-    (opt '()))
-
-  (define (with-arguments?)
-    ((compose not zero? length) (arguments)))
+  (define (read-files-from-stdin)
+    (let loop ((input (read-line)) (files '()))
+      (if (eof-object? input)
+          (reverse files)
+          (loop (read-line) (cons input files)))))
 
   (define harness-callback
     (if (opt 'verbose)
@@ -826,19 +874,30 @@
     (format #t "~a version ~a~%" *name* (pp-version *version*))
     (quit 0))
 
+  (define file-list
+    (fold-right (lambda (x a)
+                  (if (string= x "-")
+                      (append (read-files-from-stdin) a)
+                      (cons x a)))
+                '()
+                (opt '())))
+
+  (define (with-arguments?)
+    ((compose not zero? length) file-list))
+
   (when (and (opt 'exec) (not (with-arguments?)))
     (format #t "~a: Option --exec (-e) requires non-option arguments to run.~%"
             *name*)
     (quit 1))
 
-  (when (opt 'colour)
+  (when (or (opt 'colour) (opt 'color))
     (enable-harness-colours!))
 
   (quit
    (harness-combined-result
     (if (with-arguments?)
         (harness-analyse ((if (opt 'debug) pp-harness-state identity)
-                          (harness-run #:run-programs (arguments)
+                          (harness-run #:run-programs file-list
                                        #:runner (opt 'exec)
                                        #:callback harness-callback))
                          #:pre-summary (lambda (_) (newline)))

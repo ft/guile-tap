@@ -1,7 +1,3 @@
 #!/bin/sh
 
-bootstrap='
-(use-modules ((test tap-harness) #:select (tap-harness:main)))
-(tap-harness:main)'
-
-exec guile -c "$bootstrap" -- "$@"
+exec guile -e '(@ (test tap-harness) tap-harness:main)' -- "$@"

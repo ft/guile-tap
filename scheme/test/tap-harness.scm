@@ -664,7 +664,11 @@
      (display "TAP version ")
      (display version))
 
-    (('unknown . text) (display text)))
+    (('unknown . text) (cfmt #t
+                             '(fg yellow) '(at dim)
+                             text
+                             '(at reset)
+                             '(fg default))))
 
   (newline)
   s)
@@ -860,7 +864,8 @@
                                #:plan render-parsed
                                #:diagnostic render-parsed
                                #:version render-parsed
-                               #:bailout render-parsed)
+                               #:bailout render-parsed
+                               #:unknown render-parsed)
         (make-harness-callback #:plan progress-plan
                                #:test progress-test
                                #:bailout render-parsed

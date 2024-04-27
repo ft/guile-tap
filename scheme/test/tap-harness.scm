@@ -34,6 +34,7 @@
   #:use-module (ice-9 regex)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9 gnu)
+  #:use-module (srfi srfi-11)
   #:export (enable-harness-colours!
             make-harness-callback
             make-bundle-state
@@ -437,9 +438,12 @@
       (broken (handle-broken s broken input)))))
 
 (define (run-test p r)
-  (if r
-      (open-pipe* OPEN_READ r p)
-      (open-pipe p OPEN_READ)))
+  (let* ((prog (if r r p))
+         (cmd (if r (list r p) (list p)))
+         (io (pipe))
+         (pid (spawn prog cmd #:output (cdr io))))
+    (close-port (cdr io))
+    (values pid (car io))))
 
 (define (process-return-code state rc)
   (let ((exit-value (status:exit-val rc))
@@ -457,12 +461,14 @@
           (else (push `(non-zero-return-code . ,exit-value))))))
 
 (define (program->state p r callback)
-  (let ((port (run-test p r)))
+  (let-values (((pid port) (run-test p r)))
     (let loop ((state (make-bundle-state #:name p)) (input (read-line port)))
       (if (eof-object? input)
-          (let ((rc (close-pipe port)))
-            ((cb:completion callback) (bundle-finalise
-                                       (process-return-code state rc)) input #f))
+          (begin
+            (close-port port)
+            (let ((rc (cdr (waitpid pid))))
+              ((cb:completion callback) (bundle-finalise
+                                         (process-return-code state rc)) input #f)))
           (loop (tap-process state input callback) (read-line port))))))
 
 (define* (harness-run #:key

@@ -79,11 +79,13 @@
      (fold (lambda (el acc)
              (match el
                ((pattern . callback)
-                (let ((result (string-match pattern obj)))
+                (let ((result (regexp-exec pattern obj)))
                   (when result
                     (return (callback result))))))
              acc)
            #f lst))))
+
+(define R make-regexp)
 
 (define-syntax-rule (match-string (obj capture) (pattern e0 e* ...) ...)
   (match-string-fn obj (cons pattern (lambda (capture) e0 e* ...)) ...))
@@ -97,10 +99,13 @@
          (not (string-null? obj))
          obj)))
 
+(define r-todo (R "[ \t]+#[ \t]+TODO(|[ \t]+(.*))$"))
+(define r-skip (R "[ \t]+#[ \t]+SKIP[^ \t]*(|[ \t]+(.*))$"))
+
 (define (test-directive s)
   (match-string (s m)
-    ("[ \t]+#[ \t]+TODO(|[ \t]+(.*))$"        `(todo (reason . ,m)))
-    ("[ \t]+#[ \t]+SKIP[^ \t]*(|[ \t]+(.*))$" `(skip (reason . ,m)))))
+    (r-todo `(todo (reason . ,m)))
+    (r-skip `(skip (reason . ,m)))))
 
 (define (test-suffix s)
   (if (and (string? s) (not (string-null? s)))
@@ -136,11 +141,11 @@
            (end . ,end)
            (directive . ,directive))))
 
-(define version    "^TAP version ([0-9]+)$")
-(define bailout    "^Bail out!(|[ \t]+(.*))$")
-(define testplan   "^([0-9]+)\\.\\.([0-9]+)(|[ \t]+#[ \t]+SKIP[^ \t]*(|[ \t]+(.*)))$")
-(define diagnostic "^# ?(.*)$")
-(define testline   "^(ok|not ok)(| +([0-9]+))( -[ \t]+|[ \t]+|)(.*)$")
+(define version    (R "^TAP version ([0-9]+)$"))
+(define bailout    (R "^Bail out!(|[ \t]+(.*))$"))
+(define testplan   (R "^([0-9]+)\\.\\.([0-9]+)(|[ \t]+#[ \t]+SKIP[^ \t]*(|[ \t]+(.*)))$"))
+(define diagnostic (R "^# ?(.*)$"))
+(define testline   (R "^(ok|not ok)(| +([0-9]+))( -[ \t]+|[ \t]+|)(.*)$"))
 
 (define (input->record input)
   (define (test-version m) `(version . ,(match->number m 1)))
@@ -663,8 +668,8 @@
 
     (('diagnostic . text)
      (match-string (text m)
-       ("^test bundle: " (cfmt #t '(fg magenta) "# " text '(fg default)))
-       ("" (cfmt #t '(at dim) "# " text '(at reset)))))
+       ((R "^test bundle: ") (cfmt #t '(fg magenta) "# " text '(fg default)))
+       ((R "") (cfmt #t '(at dim) "# " text '(at reset)))))
 
     (('bailout ('reason . reason))
      (display "Bail out!")

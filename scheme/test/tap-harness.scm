@@ -437,11 +437,13 @@
       (('unknown    . data)       (p cb:unknown    (handle-unknown    s data)))
       (broken (handle-broken s broken input)))))
 
-(define (run-test p r)
+(define (run-test p r merge?)
   (let* ((prog (if r r p))
          (cmd (if r (list r p) (list p)))
          (io (pipe))
-         (pid (spawn prog cmd #:output (cdr io))))
+         (pid (spawn prog cmd
+                     #:output (cdr io)
+                     #:error (if merge? (cdr io) (current-error-port)))))
     (close-port (cdr io))
     (values pid (car io))))
 
@@ -460,8 +462,8 @@
           (term-signal (push `(term-signal . ,term-signal)))
           (else (push `(non-zero-return-code . ,exit-value))))))
 
-(define (program->state p r callback)
-  (let-values (((pid port) (run-test p r)))
+(define (program->state p r merge? callback)
+  (let-values (((pid port) (run-test p r merge?)))
     (let loop ((state (make-bundle-state #:name p)) (input (read-line port)))
       (if (eof-object? input)
           (begin
@@ -474,8 +476,9 @@
 (define* (harness-run #:key
                       (run-programs '())
                       (runner #f)
+                      (merge? #f)
                       (callback (make-harness-callback)))
-  (map-in-order (lambda (p) (program->state p runner callback))
+  (map-in-order (lambda (p) (program->state p runner merge? callback))
                 run-programs))
 
 (define* (harness-stdin #:optional (callback (make-harness-callback)))
@@ -849,7 +852,7 @@
     '(norc
       man
       lib blib shuffle nocolor count nocount dry failures comments ignore-exit
-      merge recurse reverse quiet QUIET parse directives timer trap normalize
+      recurse reverse quiet QUIET parse directives timer trap normalize
       ext harness formatter source archive jobs state statefile rc rules))
 
   (define opts (getopt-long parameters option-spec
@@ -918,6 +921,7 @@
         (harness-analyse ((if (opt 'debug) pp-harness-state identity)
                           (harness-run #:run-programs file-list
                                        #:runner (opt 'exec)
+                                       #:merge? (opt 'merge)
                                        #:callback harness-callback))
                          #:pre-summary (lambda (_) (newline)))
         (harness-analyse ((if (opt 'debug) pp-harness-state identity)

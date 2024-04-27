@@ -35,6 +35,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-11)
+  #:use-module (statprof)
   #:export (enable-harness-colours!
             make-harness-callback
             make-bundle-state
@@ -817,6 +818,7 @@
       (norc)
       (normalize)
       (parse             (single-char #\p))
+      (profile)
       (quiet             (single-char #\q))
       (QUIET             (single-char #\Q))
       (recurse           (single-char #\r))
@@ -915,15 +917,22 @@
   (when (or (opt 'colour) (opt 'color))
     (enable-harness-colours!))
 
-  (quit
-   (harness-combined-result
-    (if (with-arguments?)
-        (harness-analyse ((if (opt 'debug) pp-harness-state identity)
-                          (harness-run #:run-programs file-list
-                                       #:runner (opt 'exec)
-                                       #:merge? (opt 'merge)
-                                       #:callback harness-callback))
-                         #:pre-summary (lambda (_) (newline)))
-        (harness-analyse ((if (opt 'debug) pp-harness-state identity)
-                          (harness-stdin harness-callback))
-                         #:pre-summary (lambda (_) (newline)))))))
+  (define (run cb)
+    (if (opt 'profile)
+        (statprof cb #:hz 1000 #:count-calls? #t)
+        (cb)))
+
+  (define (harness)
+    (harness-combined-result
+     (if (with-arguments?)
+         (harness-analyse ((if (opt 'debug) pp-harness-state identity)
+                           (harness-run #:run-programs file-list
+                                        #:runner (opt 'exec)
+                                        #:merge? (opt 'merge)
+                                        #:callback harness-callback))
+                          #:pre-summary (lambda (_) (newline)))
+         (harness-analyse ((if (opt 'debug) pp-harness-state identity)
+                           (harness-stdin harness-callback))
+                          #:pre-summary (lambda (_) (newline))))))
+
+  (quit (run harness)))

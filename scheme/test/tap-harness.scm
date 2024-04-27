@@ -871,6 +871,14 @@
                                #:bailout render-parsed
                                #:completion progress-completion)))
 
+  (when (opt 'debug)
+    (for-each
+     (lambda (o)
+       (format #t "debug: unused prove compatibility option --~a~%" o))
+     (filter (lambda (x) (and (symbol? x)
+                              (memq x prove-compat)))
+             (map car opts))))
+
   (when (opt 'help)
     (usage)
     (quit 0))

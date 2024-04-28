@@ -267,9 +267,7 @@
                ((bundle-number) (1- (bundle-number s)))
                ((bundle-log) (reverse (bundle-log s)))
                ((bundle-results) (finalise-results (bundle-results s))))))
-    (if (equal? '(fail) (bundle-outcome next))
-        next
-        (set-field next (bundle-outcome) (make-bundle-outcome next)))))
+    (set-field next (bundle-outcome) (make-bundle-outcome next))))
 
 (define (push-result state kind obj)
   (change-bundle-results
@@ -581,7 +579,7 @@
                            (render-parsed (car rest) #f t)))
             (treat-tests (lambda (lst) (map (lambda (x) (cons 'test x)) lst))))
         (unless (null? log)
-          (format #t "~%Logbook for ~a:~%" name)
+          (cfmt #t '(fg yellow) `("~%Logbook for ~a:~%" ,name) '(fg default))
           (pp log))
         (unless (null? skip-but-fail)
           (format #t "~%Failing tests marked as SKIP in ~a:~%" name)
@@ -739,6 +737,20 @@
         #\newline)
   s)
 
+(define (missing-tests s)
+  (define (minus a* b*)
+    (let ((a (and a* (car a*)))
+          (b (and b* (car b*))))
+      (if (and a b) (- a b) 0)))
+  (let ((oc (bundle-outcome s)))
+    (if (eq? 'fail (car oc))
+        (let ((plan (assq-ref oc 'plan)))
+          (if (not plan)
+              0
+              (minus (assq-ref plan 'expected)
+                     (assq-ref plan 'actual))))
+        0)))
+
 (define (harness-combined-result states)
   (define (get x) (lambda (b) (assq-ref (bundle-results b) x)))
   (define (count x) (fold + 0 (map (compose length (get x)) states)))
@@ -749,7 +761,8 @@
         (skip (count 'skip))
         (todo (count 'todo))
         (skip-but-fail (count 'skip-but-fail))
-        (todo-but-pass (count 'todo-but-pass)))
+        (todo-but-pass (count 'todo-but-pass))
+        (missing (fold + 0 (map missing-tests states))))
 
     (let* ((n (+ pass fail skip todo skip-but-fail todo-but-pass))
            (always (lambda _ #t))
@@ -769,6 +782,11 @@
       (tell skip-but-fail 'red     "are marked to SKIP but signaled failure")
       (tell todo          'default "were marked as TODO")
       (tell todo-but-pass 'cyan    "are marked as TODO but signaled success")
+      (unless (zero? missing)
+        (cfmt #t "  • "
+              `(fg yellow)
+              `("~a planned test~p did not run.~%" ,missing ,missing)
+              '(fg default)))
       (newline)
       (cfmt #t "Test Result: "
             `(fg ,(if pass? 'green 'red))

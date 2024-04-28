@@ -650,9 +650,10 @@
             ('number . num)
             ('description . desc)
             ('directive . dir))
-     (cfmt #t `(fg ,(if dir
-                        'yellow
-                        (if result 'green 'red)))
+     (cfmt #t
+           `(fg ,(cond (dir    'yellow)
+                       (result 'green)
+                       (else   'red)))
            (if result "ok" "not ok")
            '(fg default))
      (maybe num)

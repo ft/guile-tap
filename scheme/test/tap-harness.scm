@@ -64,6 +64,37 @@
 (define *tap-harness-version* 12)
 (define *progress-column* 50)
 
+;; Helper to define a configuration data type. We're using this type to pass
+;; configuration down into the depths of the harness program. It is made from
+;; values passed in via command line arguments.
+(define-syntax define-config
+  (lambda (s)
+    (syntax-case s ()
+      ((def type sym ...)
+       (with-syntax
+           (((access ...)
+             (map (lambda (x) (datum->syntax #'def (symbol-append 'tap: x)))
+                  (syntax->datum #'(sym ...))))
+            (construct (datum->syntax #'def (symbol-append
+                                             'make- (syntax->datum #'type))))
+            (predicate (datum->syntax #'def (symbol-append
+                                             (syntax->datum #'type) '?)))
+            (type* (datum->syntax #'def (symbol-append
+                                         '< (syntax->datum #'type) '>))))
+         #'(define-immutable-record-type type*
+             (construct sym ...)
+             predicate
+             (sym access) ...))))))
+
+;; This defines a <harness-config> type, that can be constructed using the
+;; make-harness-config constructor. Such objects can be tested for using the
+;; harness-config? predicate. All symbols listed after the type base-name
+;; (harness-config) specify slots of the type, that can be accessed using
+;; "tap:MEMBERNAME" functions. For instance (tap:colours? config).
+(define-config harness-config
+  colour? debug? merge? profile? verbose?
+  runner)
+
 (define (assq-change alist key value)
   (let loop ((rest alist))
     (match rest
@@ -441,13 +472,16 @@
       (('unknown    . data)       (p cb:unknown    (handle-unknown    s data)))
       (broken (handle-broken s broken input)))))
 
-(define (run-test p r merge?)
-  (let* ((prog (if r r p))
+(define (run-test config p)
+  (let* ((r (tap:runner config))
+         (prog (if r r p))
          (cmd (if r (list r p) (list p)))
          (io (pipe))
          (pid (spawn prog cmd
                      #:output (cdr io)
-                     #:error (if merge? (cdr io) (current-error-port)))))
+                     #:error (if (tap:merge? config)
+                                 (cdr io)
+                                 (current-error-port)))))
     (close-port (cdr io))
     (values pid (car io))))
 
@@ -466,8 +500,8 @@
           (term-signal (push `(term-signal . ,term-signal)))
           (else (push `(non-zero-return-code . ,exit-value))))))
 
-(define (program->state p r merge? callback)
-  (let-values (((pid port) (run-test p r merge?)))
+(define (program->state p config callback)
+  (let-values (((pid port) (run-test config p)))
     (let loop ((state (make-bundle-state #:name p)) (input (read-line port)))
       (if (eof-object? input)
           (begin
@@ -478,14 +512,15 @@
           (loop (tap-process state input callback) (read-line port))))))
 
 (define* (harness-run #:key
+                      (config #f)
                       (run-programs '())
-                      (runner #f)
-                      (merge? #f)
                       (callback (make-harness-callback)))
-  (map-in-order (lambda (p) (program->state p runner merge? callback))
+  (map-in-order (lambda (p) (program->state p config callback))
                 run-programs))
 
-(define* (harness-stdin #:optional (callback (make-harness-callback)))
+(define* (harness-stdin #:key
+                        (callback (make-harness-callback))
+                        (config #f))
   (let loop ((state (make-bundle-state))
              (input (read-line))
              (results '()))
@@ -893,14 +928,61 @@
   (define (opt o)
     (option-ref opts o #f))
 
+  ;; Service --help and --version very early.
+  (when (opt 'help)
+    (usage)
+    (quit 0))
+
+  (when (opt 'version)
+    (format #t "~a version ~a~%" *name* (pp-version *version*))
+    (quit 0))
+
+  ;; Turn important options into <harness-config> instance.
+  (define cfg (make-harness-config (or (opt 'colour) (opt 'color))
+                                   (opt 'debug)
+                                   (opt 'merge)
+                                   (opt 'profile)
+                                   (opt 'verbose)
+                                   (opt 'exec)))
+
+  (when (tap:debug? cfg)
+    ;; When --debug is on, report options that we only accept for prove
+    ;; compatibility.
+    (for-each
+     (lambda (o)
+       (format #t "debug: unused prove compatibility option --~a~%" o))
+     (filter (lambda (x) (and (symbol? x)
+                              (memq x prove-compat)))
+             (map car opts)))
+    ;; Show config from command line parameters as well.
+    (format #t "Configuration: ~a~%" cfg))
+
   (define (read-files-from-stdin)
     (let loop ((input (read-line)) (files '()))
       (if (eof-object? input)
           (reverse files)
           (loop (read-line) (cons input files)))))
 
+  (define file-list
+    (fold-right (lambda (x a)
+                  (if (string= x "-")
+                      (append (read-files-from-stdin) a)
+                      (cons x a)))
+                '()
+                (opt '())))
+
+  (define with-arguments? ((compose not zero? length) file-list))
+
+  (when (and (tap:runner cfg) (not with-arguments?))
+    (format #t "~a: Option --exec (-e) requires non-option arguments to run.~%"
+            *name*)
+    (quit 1))
+
+  (when (tap:colour? cfg)
+    (enable-harness-colours!))
+
   (define harness-callback
-    (if (opt 'verbose)
+    (if (tap:verbose? cfg)
         (make-harness-callback #:test render-parsed
                                #:plan render-parsed
                                #:diagnostic render-parsed
@@ -912,57 +994,22 @@
                                #:bailout render-parsed
                                #:completion progress-completion)))
 
-  (when (opt 'debug)
-    (for-each
-     (lambda (o)
-       (format #t "debug: unused prove compatibility option --~a~%" o))
-     (filter (lambda (x) (and (symbol? x)
-                              (memq x prove-compat)))
-             (map car opts))))
-
-  (when (opt 'help)
-    (usage)
-    (quit 0))
-
-  (when (opt 'version)
-    (format #t "~a version ~a~%" *name* (pp-version *version*))
-    (quit 0))
-
-  (define file-list
-    (fold-right (lambda (x a)
-                  (if (string= x "-")
-                      (append (read-files-from-stdin) a)
-                      (cons x a)))
-                '()
-                (opt '())))
-
-  (define (with-arguments?)
-    ((compose not zero? length) file-list))
-
-  (when (and (opt 'exec) (not (with-arguments?)))
-    (format #t "~a: Option --exec (-e) requires non-option arguments to run.~%"
-            *name*)
-    (quit 1))
-
-  (when (or (opt 'colour) (opt 'color))
-    (enable-harness-colours!))
-
   (define (run cb)
-    (if (opt 'profile)
+    (if (tap:profile? cfg)
         (statprof cb #:hz 1000 #:count-calls? #t)
         (cb)))
 
   (define (harness)
     (harness-combined-result
-     (if (with-arguments?)
-         (harness-analyse ((if (opt 'debug) pp-harness-state identity)
+     (if with-arguments?
+         (harness-analyse ((if (tap:debug? cfg) pp-harness-state identity)
                            (harness-run #:run-programs file-list
-                                        #:runner (opt 'exec)
-                                        #:merge? (opt 'merge)
+                                        #:config cfg
                                         #:callback harness-callback))
                           #:pre-summary (lambda (_) (newline)))
-         (harness-analyse ((if (opt 'debug) pp-harness-state identity)
-                           (harness-stdin harness-callback))
+         (harness-analyse ((if (tap:debug? cfg) pp-harness-state identity)
+                           (harness-stdin #:callback harness-callback
+                                          #:config cfg))
                           #:pre-summary (lambda (_) (newline))))))
 
   (quit (run harness)))

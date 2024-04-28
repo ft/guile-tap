@@ -14,7 +14,7 @@ CFLAGS += -Wbad-case-datum -Wformat -L$(LOAD_PATH)
 COMPILE = $(GUILD_BINARY) compile $(CFLAGS)
 
 TESTGUILE = ./tools/guile-in-here
-PROVE = '$(TESTGUILE)' ./bin/tap-harness --colour -e '$(TESTGUILE)'
+PROVE = ./tools/tap-harness --merge --colour -e '$(TESTGUILE)'
 
 INSTALL = $(GUILE_BINARY) --no-auto-compile ./tools/install
 DESTDIR =
@@ -37,16 +37,16 @@ all: $(OBJECTS)
 doc:
 	@(cd doc && $(MAKE) all;)
 
-test:
+test: tools/tap-harness
 	$(PROVE) $(TESTS)
 
-test-verbose:
+test-verbose: tools/tap-harness
 	$(PROVE) --verbose $(TESTS)
 
-failures:
+failures: tools/tap-harness
 	$(PROVE) examples/*.scm || true
 
-failures-verbose:
+failures-verbose: tools/tap-harness
 	$(PROVE) --verbose examples/*.scm || true
 
 install: all

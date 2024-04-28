@@ -782,11 +782,17 @@
       (tell skip-but-fail 'red     "are marked to SKIP but signaled failure")
       (tell todo          'default "were marked as TODO")
       (tell todo-but-pass 'cyan    "are marked as TODO but signaled success")
-      (unless (zero? missing)
-        (cfmt #t "  • "
-              `(fg yellow)
-              `("~a planned test~p did not run.~%" ,missing ,missing)
-              '(fg default)))
+      (cond ((positive? missing)
+             (cfmt #t "  • "
+                   `(fg yellow)
+                   `("~a planned test~p did not run.~%" ,missing ,missing)
+                   '(fg default)))
+            ((negative? missing)
+             (let ((missing* (* -1 missing)))
+               (cfmt #t "  • "
+                     `(fg yellow)
+                     `("Ran ~a test~p more than planned.~%" ,missing* ,missing*)
+                     '(fg default)))))
       (newline)
       (cfmt #t "Test Result: "
             `(fg ,(if pass? 'green 'red))

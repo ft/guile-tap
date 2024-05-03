@@ -2,6 +2,43 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.4.6 → v0.5.0 (released 2024-05-03):
+
+** New Features
+
+- harness: Add --merge option (prove compat)
+- harness: Allow (almost) all prove options to be specified, even if they do
+  not change tap-harness's behaviour. This is to allow the program to be used
+  more as a drop-in replacement for prove.
+- harness: Add --profile option, that runs the core of the harness in statprof
+  for debugging performance issues in the harness itself.
+- harness: Output data that does not adhere to the TAP. This is useful general-
+  ly but is vital with --merge, which is often used to capture error output
+  from a test program, which most likely does not emit TAP.
+- harness: Precompile regular expression strings to improve performance roughly
+  to prove standards.
+- harness: Improve handling of prematurely existing test programs.
+- harness: Improve handling of test programs that run more tests than planned.
+
+** Miscellaneous
+
+- harness: Moved main program code to its module.
+- harness: Change tap-harness program into a shell trampoline for better usabi-
+  lity in more situations.
+
+** Diffstat
+
+    .dir-locals.el                     |  12 +
+    .gitignore                         |   2 +
+    Makefile                           |  21 +-
+    bin/tap-harness                    |  87 +------
+    scheme/test/tap-harness.scm        | 354 +++++++++++++++++++++++++----
+    tools/{run-single-test => dev-env} |   7 +-
+    tools/guile-in-here                |   5 +
+    tools/tap-harness.in               |  17 ++
+    8 files changed, 369 insertions(+), 136 deletions(-)
+
+
 * v0.4.5 → v0.4.6 (released 2021-12-04):
 
 ** Bugfix

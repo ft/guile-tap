@@ -2,6 +2,19 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.5.0 → v0.5.1 (released 2024-05-03):
+
+** Bugfixes
+
+- dev-env: Fix GUILE_LOAD_COMPILED_PATH environment variable name.
+
+** Diffstat
+
+    tools/dev-env        | 3 +--
+    tools/tap-harness.in | 3 +--
+    2 files changed, 2 insertions(+), 4 deletions(-)
+
+
 * v0.4.6 → v0.5.0 (released 2024-05-03):
 
 ** New Features
@@ -41,7 +54,7 @@
 
 * v0.4.5 → v0.4.6 (released 2021-12-04):
 
-** Bugfix
+** Bugfixes
 
 - Properly extend ~GUILE_LOAD_PATH~ and ~GUILE_COMPILED_PATH~ in
   ~tools/run-single-test~.
@@ -62,7 +75,7 @@
 
 * v0.4.4 → v0.4.5 (released 2021-10-10):
 
-** Bugfix
+** Bugfixes
 
 - Fix backtrace output in exception handling.
 
@@ -100,7 +113,7 @@
 
 * v0.4.1 → v0.4.2 (released 2021-06-27):
 
-** Bugfix
+** Bugfixes
 
 - Fix TAP harness shebang line (5331e773)
 - Fix info page installation (9dc1904f..ab88a048)
@@ -119,7 +132,7 @@
 
 * v0.4.0 → v0.4.1 (released 2021-06-06):
 
-** Bugfix
+** Bugfixes
 
 - Fix DESTDIR handling in installation procedure. (a6f3bac)
 

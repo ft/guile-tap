@@ -478,6 +478,7 @@
          (cmd (if r (list r p) (list p)))
          (io (pipe))
          (pid (spawn prog cmd
+                     #:search-path? (not (not r))
                      #:output (cdr io)
                      #:error (if (tap:merge? config)
                                  (cdr io)

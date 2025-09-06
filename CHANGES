@@ -2,6 +2,21 @@
  User-visible changes in guile-tap
 -----------------------------------
 
+* v0.5.1 → v0.5.2 (released 2025-09-07):
+
+** Bugfixes
+
+- harness: Only search PATH if an executor program is specified. This improves
+  prove(1) compatibility.
+- harness: Do not load ~/.guile at startup.
+
+** Diffstat
+
+    bin/tap-harness             | 2 +-
+    scheme/test/tap-harness.scm | 1 +
+    2 files changed, 2 insertions(+), 1 deletion(-)
+
+
 * v0.5.0 → v0.5.1 (released 2024-05-03):
 
 ** Bugfixes

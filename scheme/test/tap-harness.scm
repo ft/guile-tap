@@ -475,10 +475,11 @@
 (define (run-test config p)
   (let* ((r (tap:runner config))
          (params (tap:test-parameters config))
-         (prog (if r r p))
-         (cmd (if r (cons* r p params) (cons* p params)))
+         (cmd (append r (cons p params)))
          (io (pipe))
-         (pid (spawn prog cmd
+         (_ (when (tap:debug? config)
+              (format #t "spawn: ~s~%" cmd)))
+         (pid (spawn (car cmd) cmd
                      #:search-path? (not (not r))
                      #:output (cdr io)
                      #:error (if (tap:merge? config)
@@ -950,7 +951,11 @@
                                    (opt 'merge)
                                    (opt 'profile)
                                    (opt 'verbose)
-                                   (opt 'exec)
+                                   (if (opt 'exec)
+                                       (filter (negate string-null?)
+                                               (string-split (opt 'exec)
+                                                             #\space))
+                                       '())
                                    test-params))
 
   (when (tap:debug? cfg)

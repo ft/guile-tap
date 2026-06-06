@@ -93,7 +93,7 @@
 ;; "tap:MEMBERNAME" functions. For instance (tap:colours? config).
 (define-config harness-config
   colour? debug? merge? profile? verbose?
-  runner)
+  runner test-parameters)
 
 (define (assq-change alist key value)
   (let loop ((rest alist))
@@ -474,8 +474,9 @@
 
 (define (run-test config p)
   (let* ((r (tap:runner config))
+         (params (tap:test-parameters config))
          (prog (if r r p))
-         (cmd (if r (list r p) (list p)))
+         (cmd (if r (cons* r p params) (cons* p params)))
          (io (pipe))
          (pid (spawn prog cmd
                      #:search-path? (not (not r))
@@ -860,11 +861,16 @@
   (newline))
 
 (define (tap-harness:main params)
-  (define parameters (let loop ((rest params))
-                       (cond ((null? rest) params)
-                             ((string= (car rest) "--") (cons "tap-harness"
-                                                              (cdr rest)))
-                             (else (loop (cdr rest))))))
+  (define main-params #f)
+  (define test-params #f)
+  (let-values (((m t) (let loop ((rest params) (main-params 0))
+                        (cond ((null? rest) (values params '()))
+                              ((string= (car rest) "::")
+                               (values (take params main-params)
+                                       (cdr rest)))
+                              (else (loop (cdr rest) (1+ main-params)))))))
+    (set! main-params m)
+    (set! test-params t))
   (define option-spec
     '((blib              (single-char #\b))
       (colour            (single-char #\c))
@@ -923,7 +929,7 @@
       recurse reverse quiet QUIET parse directives timer trap normalize
       ext harness formatter source archive jobs state statefile rc rules))
 
-  (define opts (getopt-long parameters option-spec
+  (define opts (getopt-long main-params option-spec
                             #:stop-at-first-non-option #t))
 
   (define (opt o)
@@ -944,7 +950,8 @@
                                    (opt 'merge)
                                    (opt 'profile)
                                    (opt 'verbose)
-                                   (opt 'exec)))
+                                   (opt 'exec)
+                                   test-params))
 
   (when (tap:debug? cfg)
     ;; When --debug is on, report options that we only accept for prove

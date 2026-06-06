@@ -1,4 +1,4 @@
-;; Copyright (c) 2021 Frank Terbeck <ft@bewatermyfriend.org>
+;; Copyright (c) 2021-2026 Frank Terbeck <ft@bewatermyfriend.org>
 ;; All rights reserved.
 ;; Terms for redistribution and use can be found in LICENCE.
 

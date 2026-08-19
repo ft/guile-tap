@@ -1,6 +1,9 @@
 .*
 !.gitignore
 !.dir-locals.el
+!.guix
+!.guix-channel
+!.guix-authorizations
 *~
 *.orig
 *.go

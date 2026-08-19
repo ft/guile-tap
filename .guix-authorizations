@@ -1,0 +1,5 @@
+;; -*- scheme -*-
+
+(authorizations
+ (version 0)
+ (("4DA9 08BC 6844 BD91 4B97  11ED 4CB0 8324 E1D9 88BD" (name "ft"))))

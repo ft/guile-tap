@@ -1,0 +1,6 @@
+;; -*- mode: scheme -*-
+
+(channel
+  (version 0)
+  (directory ".guix")
+  (url "https://codeberg.org/ft/guile-tap.git"))
